@@ -7,22 +7,28 @@ def send_whatsapp_message(recipient, message_body, content_sid=None, template_va
     """
     Sends a WhatsApp message using credentials from Twilio Settings.
     Can send a simple text message or a template message.
-
-    :param recipient: The recipient's phone number in E.164 format (e.g., +919876543210).
-    :param message_body: The text of the message or fallback text for a template.
-    :param content_sid: (Optional) The SID of the Twilio template (e.g., 'HX...').
-    :param template_variables: (Optional) A dictionary of variables for the template, e.g., {"1": "Value1", "2": "Value2"}.
     """
     try:
-        settings = frappe.get_doc("Twilio Settings")
-        account_sid = settings.twilio_account_sid
-        auth_token = settings.get_password('twilio_auth_token')
-        from_number = settings.twilio_whatsapp_number
+        # FIX: Using a more robust method to get credentials from the Single Doctype.
+        # This directly reads the values and provides better error handling.
+        account_sid = frappe.db.get_single_value("Twilio Settings", "twilio_account_sid")
+        from_number = frappe.db.get_single_value("Twilio Settings", "twilio_whatsapp_number")
+        
+        if not account_sid or not from_number:
+             error_msg = "Twilio Account SID or From Number is not set in Twilio Settings. Please check the configuration."
+             frappe.log_error(error_msg, "Twilio Integration Error")
+             return {"status": "error", "message": error_msg}
 
-        if not all([account_sid, auth_token, from_number]):
-            frappe.log_error("Twilio credentials are not set in Twilio Settings.", "Twilio Integration Error")
-            return {"status": "error", "message": "Twilio credentials are not configured."}
+        # get_password must be called on the full document object.
+        settings_doc = frappe.get_doc("Twilio Settings")
+        auth_token = settings_doc.get_password('twilio_auth_token')
 
+        if not auth_token:
+            error_msg = "Twilio Auth Token is not set in Twilio Settings. Please check the configuration."
+            frappe.log_error(error_msg, "Twilio Integration Error")
+            return {"status": "error", "message": error_msg}
+
+        # Construct the API request
         url = f"https://api.twilio.com/2010-04-01/Accounts/{account_sid}/Messages.json"
         
         data = {
@@ -52,5 +58,5 @@ def send_whatsapp_message(recipient, message_body, content_sid=None, template_va
         return {"status": "error", "message": error_message}
     
     except Exception as e:
-        frappe.log_error(f"Failed to send WhatsApp message to {recipient}: {str(e)}", "Twilio Integration Error")
+        frappe.log_error(f"Failed to send WhatsApp message to {recipient}: {frappe.get_traceback()}", "Twilio Integration Error")
         return {"status": "error", "message": str(e)}
