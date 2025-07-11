@@ -9,7 +9,7 @@ def send_whatsapp_message(recipient, message_body, content_sid=None, template_va
     Includes a msgprint command for definitive testing.
     """
     # This is the test line. If this runs, the app is working.
-    frappe.msgprint("Confirmation: The send_whatsapp_message function in your custom app is running.")
+    # frappe.msgprint("Confirmation: The send_whatsapp_message function in your custom app is running.")
 
     try:
         # Get credentials securely from the Single Doctype
